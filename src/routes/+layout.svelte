@@ -139,9 +139,7 @@
 	{#if isAdmin && !authState.ready}
 		<main class="auth-access" aria-live="polite"><p>Verificando sua sessão…</p></main>
 	{:else if isAdmin && !authState.user}
-		<main class="auth-access"><h1>Entre para continuar</h1><p>Faça login com uma conta autorizada para acessar a administração.</p><a class="btn" href="/login">Ir para o login</a></main>
-	{:else if isAdmin && !authState.isAdmin}
-		<main class="auth-access"><h1>Acesso restrito</h1><p>Sua conta não tem permissão de administrador.</p><a class="btn btn--ghost" href="/">Voltar à loja</a></main>
+		<main class="auth-access"><h1>Entre para continuar</h1><p>Faça login para cadastrar produtos.</p><a class="btn" href="/login">Ir para o login</a></main>
 	{:else}
 		{@render children()}
 	{/if}

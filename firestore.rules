@@ -36,7 +36,7 @@ service cloud.firestore {
 
 		match /produtos/{produtoId} {
 			allow get, list: if isAdmin() || resource.data.publicado == true;
-			allow create: if isAdmin()
+			allow create: if signedIn()
 				&& validProduct(request.resource.data)
 				&& request.resource.data.criadoEm == request.time
 				&& request.resource.data.atualizadoEm == request.time;
