@@ -1,11 +1,8 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase web configuration is public by design; access is enforced by Auth and Firestore Rules.
 const firebaseConfig = {
   apiKey: "AIzaSyDsfbjXJO8oenfYJpdqWbaVWWS4bAwVPoY",
   authDomain: "emporio-arcano.firebaseapp.com",
@@ -16,6 +13,29 @@ const firebaseConfig = {
   measurementId: "G-4297FHDZKE"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+let cachedServices;
+
+function getServices() {
+	if (typeof window === 'undefined') {
+		throw new Error('Os serviços Firebase só podem ser acessados no navegador.');
+	}
+
+	if (!cachedServices) {
+		const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+		cachedServices = {
+			auth: getAuth(app),
+			db: getFirestore(app)
+		};
+	}
+
+	return cachedServices;
+}
+
+export function getAuthClient() {
+	return getServices().auth;
+}
+
+export function getFirestoreClient() {
+	return getServices().db;
+}

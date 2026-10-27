@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+	match /databases/{database}/documents {
+		function signedIn() {
+			return request.auth != null;
+		}
+
+		function isAdmin() {
+			return signedIn()
+				&& exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+				&& get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.ativo == true;
+		}
+
+		function validProduct(data) {
+			return data.keys().hasOnly([
+				'nome', 'descricao', 'categoria', 'material', 'preco', 'estoque',
+				'imagemUrl', 'publicado', 'destacado', 'selo', 'criadoEm', 'atualizadoEm'
+			])
+			&& data.keys().hasAll([
+				'nome', 'descricao', 'categoria', 'material', 'preco', 'estoque',
+				'imagemUrl', 'publicado', 'destacado', 'selo', 'criadoEm', 'atualizadoEm'
+			])
+			&& data.nome is string && data.nome.size() > 0 && data.nome.size() <= 120
+			&& data.descricao is string && data.descricao.size() > 0 && data.descricao.size() <= 5000
+			&& data.categoria is string && data.categoria.size() > 0 && data.categoria.size() <= 80
+			&& data.material is string && data.material.size() <= 80
+			&& data.preco is number && data.preco > 0
+			&& data.estoque is int && data.estoque >= 0
+			&& data.imagemUrl is string && data.imagemUrl.size() <= 2048
+			&& data.imagemUrl.matches('^https?://.+$')
+			&& data.publicado is bool
+			&& data.destacado is bool
+			&& data.selo is string && data.selo.size() <= 40;
+		}
+
+		match /produtos/{produtoId} {
+			allow get, list: if isAdmin() || resource.data.publicado == true;
+			allow create: if isAdmin()
+				&& validProduct(request.resource.data)
+				&& request.resource.data.criadoEm == request.time
+				&& request.resource.data.atualizadoEm == request.time;
+			allow update: if isAdmin()
+				&& validProduct(request.resource.data)
+				&& request.resource.data.criadoEm == resource.data.criadoEm
+				&& request.resource.data.atualizadoEm == request.time;
+			allow delete: if isAdmin();
+		}
+
+		match /admins/{uid} {
+			allow get: if signedIn() && request.auth.uid == uid;
+			allow list, create, update, delete: if false;
+		}
+	}
+}
