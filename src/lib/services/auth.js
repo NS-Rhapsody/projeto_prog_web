@@ -49,6 +49,8 @@ export function mensagemErroAutenticacao(error) {
 		'auth/invalid-email': 'Confira o endereço de e-mail informado.',
 		'auth/invalid-credential': 'E-mail ou senha incorretos.',
 		'auth/user-disabled': 'Esta conta está desativada. Entre em contato com o atendimento.',
+		'auth/requires-recent-login': 'Por segurança, entre novamente na sua conta e repita a operação.',
+		'auth/user-token-expired': 'Sua sessão expirou. Entre novamente na sua conta.',
 		'auth/weak-password': 'Escolha uma senha com pelo menos 6 caracteres.',
 		'auth/missing-password': 'Informe sua senha.',
 		'auth/network-request-failed': 'Não foi possível conectar. Verifique a internet e tente novamente.',

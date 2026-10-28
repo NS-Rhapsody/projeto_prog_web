@@ -101,6 +101,7 @@
 		<symbol id="i-send" viewBox="0 0 24 24"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03L21.99 2.5a.5.5 0 0 0-.65-.65L2.34 8.53a.5.5 0 0 0-.03.94l6.76 2.66a2 2 0 0 1 1.1 1.1z"/><path d="m21.85 2.15-10.94 10.93"/></symbol>
 		<symbol id="i-fileclock" viewBox="0 0 24 24"><path d="M16 22h2a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v3"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><circle cx="8" cy="16" r="6"/><path d="M9.5 17.5 8 16.25V14"/></symbol>
 		<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+		<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
 		<symbol id="i-mail" viewBox="0 0 24 24"><path d="m22 7-8.99 5.73a2 2 0 0 1-2.02 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></symbol>
 	</svg>
 
@@ -118,12 +119,13 @@
 					<li><a href="/produtos" onclick={() => (menuOpen = false)}>Mapas</a></li>
 					<li><a href="/produtos" onclick={() => (menuOpen = false)}>Dados</a></li>
 					<li><a href="/produtos" onclick={() => (menuOpen = false)}>Literatura</a></li>
+					{#if authState.user}<li class="nav__account"><a href="/conta" onclick={() => (menuOpen = false)} aria-current={currentView === 'conta' ? 'page' : undefined}>Minha conta</a></li>{/if}
 				</ul>
 			</nav>
 			<div class="header__actions">
 				<button class="header__search" type="button" aria-label="Buscar"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg></button>
 				{#if authState.user}
-					<span class="header__account" title={authState.user.email}>{authState.user.displayName || authState.user.email}</span>
+					<a class="header__account" href="/conta" title="Minha conta" aria-label="Minha conta" aria-current={currentView === 'conta' ? 'page' : undefined}><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg><span>{authState.user.displayName || authState.user.email}</span></a>
 					<button class="header__login header__logout" type="button" onclick={logout}>Sair</button>
 				{:else}
 					<a class="header__login" href="/login">Login</a>
