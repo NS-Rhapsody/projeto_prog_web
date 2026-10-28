@@ -52,7 +52,7 @@ O projeto usa Firebase Authentication para contas por e-mail e senha e Cloud Fir
    firebase deploy --only firestore:rules
    ```
 
-3. Crie uma conta pela tela `/cadastro`. Qualquer usuário autenticado pode acessar `/admin` e cadastrar produtos, que são publicados imediatamente. Para liberar edição e remoção, copie o UID da conta administradora na lista de usuários do Authentication e crie no Firestore o documento `admins/{UID}` com o campo booleano `ativo: true`. As regras impedem que usuários criem ou alterem documentos nessa coleção pelo aplicativo.
-4. Produtos publicados aparecem em `/produtos`; rascunhos ficam visíveis apenas no painel administrativo.
+3. Crie uma conta pela tela `/cadastro`. Para liberar o acesso a `/admin` e o gerenciamento de produtos, copie o UID dessa conta na lista de usuários do Authentication e crie no Firestore o documento `admins/{UID}` com o campo booleano `ativo: true`. As regras impedem que usuários criem ou alterem documentos nessa coleção pelo aplicativo.
+4. Administradores podem cadastrar, editar, publicar e remover produtos em `/admin`. Produtos publicados aparecem em `/produtos`; rascunhos ficam visíveis apenas no painel administrativo.
 
-O painel exige uma sessão para cadastrar produtos. As regras em `firestore.rules` permitem que usuários autenticados publiquem novos produtos; somente contas com documento `admins/{UID}` ativo podem listar produtos não publicados, editar ou remover produtos. Essas permissões são aplicadas no banco, além da interface.
+O painel verifica a sessão e a existência do documento `admins/{UID}` com `ativo: true`. As regras em `firestore.rules` aplicam a mesma permissão no banco: somente administradores podem listar rascunhos ou criar, editar e remover produtos. A leitura de produtos publicados permanece pública para o catálogo.

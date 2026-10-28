@@ -10,7 +10,7 @@
 	let authNotice = $state('');
 	let authState = $state({ user: null, ready: false, isAdmin: false });
 	let currentView = $derived(page.url.pathname.replace(/^\/+|\/+$/g, '') || 'home');
-	let isAdmin = $derived(currentView === 'admin');
+	let isAdminPage = $derived(currentView === 'admin');
 
 	setContext('auth', authState);
 
@@ -104,7 +104,7 @@
 		<symbol id="i-mail" viewBox="0 0 24 24"><path d="m22 7-8.99 5.73a2 2 0 0 1-2.02 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></symbol>
 	</svg>
 
-	{#if !isAdmin}
+	{#if !isAdminPage}
 		<header class="header">
 			<a class="header__logo" href="/" aria-label="Empório Arcano — página inicial">
 				<svg class="icon header__logo-icon" aria-hidden="true"><use href="#i-x"/></svg>
@@ -136,17 +136,19 @@
 		</header>
 	{/if}
 
-	{#if isAdmin && !authState.ready}
+	{#if isAdminPage && !authState.ready}
 		<main class="auth-access" aria-live="polite"><p>Verificando sua sessão…</p></main>
-	{:else if isAdmin && !authState.user}
-		<main class="auth-access"><h1>Entre para continuar</h1><p>Faça login para cadastrar produtos.</p><a class="btn" href="/login">Ir para o login</a></main>
+	{:else if isAdminPage && !authState.user}
+		<main class="auth-access"><h1>Entre para continuar</h1><p>Faça login com uma conta autorizada para acessar a administração.</p><a class="btn" href="/login">Ir para o login</a></main>
+	{:else if isAdminPage && !authState.isAdmin}
+		<main class="auth-access"><h1>Acesso restrito</h1><p>Sua conta não tem permissão de administrador.</p><a class="btn btn--ghost" href="/">Voltar à loja</a></main>
 	{:else}
 		{@render children()}
 	{/if}
 
 	{#if authNotice}<p class="auth-notice" role="status">{authNotice}</p>{/if}
 
-	{#if !isAdmin}
+	{#if !isAdminPage}
 		<footer class="footer">
 			<div class="footer__main">
 				<div class="footer__brand">
