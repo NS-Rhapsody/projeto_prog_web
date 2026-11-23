@@ -8,7 +8,8 @@
 	let { children } = $props();
 	let menuOpen = $state(false);
 	let authNotice = $state('');
-	let authState = $state({ user: null, ready: false, isAdmin: false });
+	let authState = $state({ user: null, ready: false, isAdmin: false, cart: {} });
+	let cartCount = $derived(Object.values(authState.cart).reduce((total, quantity) => total + Number(quantity || 0), 0));
 	let currentView = $derived(page.url.pathname.replace(/^\/+|\/+$/g, '') || 'home');
 	let isAdminPage = $derived(currentView === 'admin');
 
@@ -16,6 +17,8 @@
 
 	onMount(() => {
 		let stopObserving;
+		let stopCartObservation;
+		let authRevision = 0;
 		let cancelled = false;
 
 		async function startAuthObserver() {
@@ -23,13 +26,34 @@
 			if (cancelled) return;
 
 			stopObserving = auth.observarAutenticacao(async (user) => {
+				const revision = ++authRevision;
 				authState.user = user;
 				authState.ready = false;
+				stopCartObservation?.();
+				stopCartObservation = undefined;
+				authState.cart = {};
+				let isAdmin = false;
 				try {
-					authState.isAdmin = user ? await auth.usuarioAdministrador(user.uid) : false;
+					isAdmin = user ? await auth.usuarioAdministrador(user.uid) : false;
 				} catch {
-					authState.isAdmin = false;
+					isAdmin = false;
 				}
+				if (cancelled || revision !== authRevision) return;
+				authState.isAdmin = isAdmin;
+				if (user) {
+					try {
+						const cartDao = await import('$lib/dao/carrinhoDAO.js');
+						if (cancelled || revision !== authRevision) return;
+						stopCartObservation = cartDao.observarCarrinho(user.uid, (cart) => {
+							authState.cart = cart;
+						}, () => {
+							authState.cart = {};
+						});
+					} catch {
+						authState.cart = {};
+					}
+				}
+				if (cancelled || revision !== authRevision) return;
 				authState.ready = true;
 			});
 		}
@@ -41,6 +65,7 @@
 		return () => {
 			cancelled = true;
 			stopObserving?.();
+			stopCartObservation?.();
 		};
 	});
 
@@ -128,7 +153,7 @@
 				{:else}
 					<a class="header__login" href="/login">Login</a>
 				{/if}
-				<button class="header__cart" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bag"/></svg><span class="header__cart-label">CARRINHO </span>(3)</button>
+				<a class="header__cart" href={authState.user ? '/carrinho' : '/login'} aria-label={`Carrinho com ${cartCount} ${cartCount === 1 ? 'produto' : 'produtos'}`}><svg class="icon" aria-hidden="true"><use href="#i-bag"/></svg><span class="header__cart-label">CARRINHO </span>({cartCount})</a>
 			</div>
 			<button class="header__toggle" type="button" aria-expanded={menuOpen} aria-controls="nav" aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'} onclick={() => (menuOpen = !menuOpen)}>
 				<span class="header__bar"></span><span class="header__bar"></span><span class="header__bar"></span>

@@ -51,5 +51,36 @@ service cloud.firestore {
 			allow get: if signedIn() && request.auth.uid == uid;
 			allow list, create, update, delete: if false;
 		}
+
+		match /carrinhos/{itemId} {
+			function itemPertenceAoUsuario() {
+				return signedIn() && itemId.matches('^' + request.auth.uid + '_.*$');
+			}
+
+			function dadosDoItemValidos(data, uid) {
+				return data.keys().hasOnly(['usuarioUid', 'produtoUid', 'quantidade', 'atualizadoEm'])
+					&& data.keys().hasAll(['usuarioUid', 'produtoUid', 'quantidade', 'atualizadoEm'])
+					&& data.usuarioUid == uid
+					&& data.produtoUid is string
+					&& data.produtoUid.size() > 0
+					&& data.quantidade is int
+					&& data.quantidade > 0
+					&& data.atualizadoEm == request.time;
+			}
+
+			allow get: if itemPertenceAoUsuario()
+				|| (signedIn() && resource.data.usuarioUid == request.auth.uid);
+			allow list: if signedIn() && resource.data.usuarioUid == request.auth.uid;
+			allow create: if signedIn()
+				&& request.resource.data.usuarioUid == request.auth.uid
+				&& itemId == request.auth.uid + '_' + request.resource.data.produtoUid
+				&& dadosDoItemValidos(request.resource.data, request.auth.uid);
+			allow update: if signedIn()
+				&& resource.data.usuarioUid == request.auth.uid
+				&& request.resource.data.usuarioUid == request.auth.uid
+				&& itemId == request.auth.uid + '_' + request.resource.data.produtoUid
+				&& dadosDoItemValidos(request.resource.data, request.auth.uid);
+			allow delete: if signedIn() && resource.data.usuarioUid == request.auth.uid;
+		}
 	}
 }

@@ -1,11 +1,31 @@
 <script>
-	import { onMount } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
+	const authState = getContext('auth');
 	let products = $state([]);
 	let loading = $state(true);
 	let errorMessage = $state('');
+	let cartMessage = $state('');
 	let featuredProducts = $derived(products.filter((product) => product.destacado).slice(0, 4));
 	const formatPrice = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
+
+	async function addToCart(product) {
+		cartMessage = '';
+		if (!authState.user) {
+			cartMessage = 'Entre na sua conta para salvar produtos no carrinho.';
+			return;
+		}
+
+		try {
+			const cart = await import('$lib/dao/carrinhoDAO.js');
+			await cart.adicionarProduto(authState.user.uid, product.id);
+			cartMessage = `${product.nome} foi adicionado ao carrinho.`;
+		} catch (error) {
+			cartMessage = error.code === 'permission-denied'
+				? 'O Firestore bloqueou o carrinho. Publique as regras atuais e confira se o usuário está conectado.'
+				: error.message || 'Não foi possível adicionar o produto ao carrinho.';
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -50,6 +70,7 @@
 	<section class="section" id="produtos" aria-labelledby="produtos-title">
 		<div class="divider" aria-hidden="true"><span class="divider__line"></span><span class="divider__center"><svg class="icon"><use href="#i-x" /></svg>Novos Produtos<svg class="icon"><use href="#i-x" /></svg></span><span class="divider__line"></span></div>
 		<div class="section__head section__head--row"><div class="section__head"><p class="eyebrow">Os Mais Procurados</p><h2 class="title" id="produtos-title">Produtos Recomendados para Você</h2></div><a class="btn btn--ghost" href="/produtos">Ver Tudo</a></div>
+		{#if cartMessage}<p class="catalog-message" role="status">{cartMessage}{#if !authState.user}<a href="/login"> Entrar</a>{/if}</p>{/if}
 		{#if loading}
 			<p class="catalog-message" role="status">Carregando produtos…</p>
 		{:else if errorMessage}
@@ -61,7 +82,7 @@
 				{#each (featuredProducts.length ? featuredProducts : products.slice(0, 4)) as product (product.id)}
 					<article class="product" class:product--featured={product.destacado}>
 						<div><div class="product__media"><img class="ph" src={product.imagemUrl} alt={product.nome} loading="lazy" />{#if product.selo}<span class="badge product__badge"><svg class="icon"><use href={product.selo === 'Mais Vendido' ? '#i-flame' : '#i-sparkles'} /></svg>{product.selo}</span>{/if}</div><div class="product__info"><h3 class="product__name">{product.nome}</h3><p class="product__desc">{product.descricao}</p></div></div>
-						<div class="product__buy"><p class="product__price"><span class="product__price-label">PREÇO</span><span class="product__price-value">{formatPrice(product.preco)}</span></p><p class="product-stock">{product.estoque > 0 ? `${product.estoque} em estoque` : 'Sem estoque'}</p></div>
+						<div class="product__buy"><p class="product__price"><span class="product__price-label">PREÇO</span><span class="product__price-value">{formatPrice(product.preco)}</span></p><p class="product-stock">{product.estoque > 0 ? `${product.estoque} em estoque` : 'Sem estoque'}</p><button class="btn btn--block" type="button" disabled={product.estoque <= 0} onclick={() => addToCart(product)}>Adicionar ao carrinho</button></div>
 					</article>
 				{/each}
 			</div>
