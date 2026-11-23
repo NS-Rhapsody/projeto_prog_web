@@ -8,14 +8,16 @@
 	let { children } = $props();
 	let menuOpen = $state(false);
 	let authNotice = $state('');
-	let authState = $state({ user: null, ready: false, isAdmin: false });
+	let authState = $state({ user: null, ready: false, isAdmin: false, cart: {} });
 	let currentView = $derived(page.url.pathname.replace(/^\/+|\/+$/g, '') || 'home');
 	let isAdminPage = $derived(currentView === 'admin');
+	let cartCount = $derived(Object.values(authState.cart).reduce((total, quantity) => total + quantity, 0));
 
 	setContext('auth', authState);
 
 	onMount(() => {
 		let stopObserving;
+		let stopCartObserving;
 		let cancelled = false;
 
 		async function startAuthObserver() {
@@ -23,12 +25,27 @@
 			if (cancelled) return;
 
 			stopObserving = auth.observarAutenticacao(async (user) => {
+				stopCartObserving?.();
+				stopCartObserving = undefined;
 				authState.user = user;
+				authState.cart = {};
 				authState.ready = false;
 				try {
 					authState.isAdmin = user ? await auth.usuarioAdministrador(user.uid) : false;
 				} catch {
 					authState.isAdmin = false;
+				}
+				if (user && !cancelled) {
+					try {
+						const { observarCarrinho } = await import('$lib/dao/carrinhoDAO.js');
+						if (!cancelled && authState.user?.uid === user.uid) {
+							stopCartObserving = observarCarrinho(user.uid, (cart) => {
+								authState.cart = cart;
+							});
+						}
+					} catch {
+						authState.cart = {};
+					}
 				}
 				authState.ready = true;
 			});
@@ -41,6 +58,7 @@
 		return () => {
 			cancelled = true;
 			stopObserving?.();
+			stopCartObserving?.();
 		};
 	});
 
@@ -130,7 +148,7 @@
 				{:else}
 					<a class="header__login" href="/login">Login</a>
 				{/if}
-				<button class="header__cart" type="button"><svg class="icon" aria-hidden="true"><use href="#i-bag"/></svg><span class="header__cart-label">CARRINHO </span>(3)</button>
+				<a class="header__cart" href={authState.user ? '/carrinho' : '/login'} aria-current={currentView === 'carrinho' ? 'page' : undefined}><svg class="icon" aria-hidden="true"><use href="#i-bag"/></svg><span class="header__cart-label">CARRINHO </span>({cartCount})</a>
 			</div>
 			<button class="header__toggle" type="button" aria-expanded={menuOpen} aria-controls="nav" aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'} onclick={() => (menuOpen = !menuOpen)}>
 				<span class="header__bar"></span><span class="header__bar"></span><span class="header__bar"></span>

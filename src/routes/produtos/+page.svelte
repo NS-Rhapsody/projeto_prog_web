@@ -1,9 +1,14 @@
 <script>
+	import { goto } from '$app/navigation';
+	import { getContext } from 'svelte';
 	import { onMount } from 'svelte';
 
+	const authState = getContext('auth');
 	let products = $state([]);
 	let loading = $state(true);
 	let errorMessage = $state('');
+	let cartMessage = $state('');
+	let addingProductUid = $state('');
 	let selectedCategory = $state('Todos os Produtos');
 	let sortBy = $state('featured');
 	let categories = $derived([
@@ -25,6 +30,34 @@
 		});
 	});
 	const formatPrice = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
+
+	async function adicionarAoCarrinho(product) {
+		if (!authState.user) {
+			await goto('/login');
+			return;
+		}
+		if (!authState.ready || addingProductUid) return;
+
+		addingProductUid = product.id;
+		cartMessage = '';
+		const quantidadeAnterior = authState.cart[product.id] || 0;
+		authState.cart = { ...authState.cart, [product.id]: quantidadeAnterior + 1 };
+		try {
+			const { adicionarProduto } = await import('$lib/dao/carrinhoDAO.js');
+			await adicionarProduto(authState.user.uid, product.id);
+			cartMessage = `${product.nome} foi adicionado ao carrinho.`;
+		} catch (error) {
+			const carrinhoRevertido = { ...authState.cart };
+			if (quantidadeAnterior) carrinhoRevertido[product.id] = quantidadeAnterior;
+			else delete carrinhoRevertido[product.id];
+			authState.cart = carrinhoRevertido;
+			cartMessage = error?.code === 'permission-denied'
+				? 'O Firestore recusou o acesso ao carrinho. Publique as regras atualizadas da coleção carrinhos.'
+				: error?.message || 'Não foi possível adicionar o produto ao carrinho.';
+		} finally {
+			addingProductUid = '';
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -50,6 +83,7 @@
 		</ul></div><hr class="sidebar__line" /></aside>
 		<div class="listing">
 			<div class="toolbar"><p class="toolbar__count">Exibindo <strong>{visibleProducts.length}</strong> de {products.length} produtos publicados</p><label class="toolbar__sort-label" for="catalog-sort">Ordenar por:</label><select class="toolbar__sort" id="catalog-sort" bind:value={sortBy}><option value="featured">Em destaque</option><option value="price-asc">Menor preço</option><option value="price-desc">Maior preço</option><option value="name">Nome</option></select></div>
+			{#if cartMessage}<p class="catalog-message" role="status">{cartMessage}</p>{/if}
 			{#if loading}
 				<p class="catalog-message" role="status">Carregando produtos…</p>
 			{:else if errorMessage}
@@ -61,7 +95,7 @@
 				{#each visibleProducts as product (product.id)}
 					<article class="product product--compact" class:product--featured={product.destacado}>
 						<div><div class="product__media"><img class="ph" src={product.imagemUrl} alt={product.nome} loading="lazy" /><span class="badge product__badge"><svg class="icon" aria-hidden="true"><use href={product.selo === 'Mais Vendido' ? '#i-flame' : '#i-sparkles'} /></svg>{product.selo || product.categoria}</span></div><div class="product__info"><p class="pcard__cat">{product.categoria}</p><h3 class="product__name">{product.nome}</h3><p class="product__desc">{product.descricao}</p></div></div>
-						<div class="product__buy"><p class="product__price"><span class="product__price-label">PREÇO</span><span class="product__price-value">{formatPrice(product.preco)}</span></p><p class="product-stock">{product.estoque > 0 ? `${product.estoque} em estoque` : 'Sem estoque'}</p></div>
+						<div class="product__buy"><p class="product__price"><span class="product__price-label">PREÇO</span><span class="product__price-value">{formatPrice(product.preco)}</span></p><p class="product-stock">{product.estoque > 0 ? `${product.estoque} em estoque` : 'Sem estoque'}</p><button class="product__cart-button" type="button" disabled={product.estoque <= 0 || Boolean(addingProductUid)} onclick={() => adicionarAoCarrinho(product)}>{addingProductUid === product.id ? 'Adicionando…' : authState.cart[product.id] ? `No carrinho (${authState.cart[product.id]}) · Adicionar` : 'Adicionar ao carrinho'}</button></div>
 					</article>
 				{/each}
 			</div>

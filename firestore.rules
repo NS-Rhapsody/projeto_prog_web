@@ -51,5 +51,34 @@ service cloud.firestore {
 			allow get: if signedIn() && request.auth.uid == uid;
 			allow list, create, update, delete: if false;
 		}
+
+		match /carrinhos/{itemId} {
+			function itemDoUsuario(uid) {
+				return request.resource.data.usuarioUid == uid
+					&& itemId == uid + '_' + request.resource.data.produtoUid;
+			}
+
+			function dadosDoItemValidos(data, uid) {
+				return data.keys().hasOnly(['usuarioUid', 'produtoUid', 'quantidade', 'atualizadoEm'])
+					&& data.keys().hasAll(['usuarioUid', 'produtoUid', 'quantidade', 'atualizadoEm'])
+					&& data.usuarioUid == uid
+					&& data.produtoUid is string && data.produtoUid.size() > 0
+					&& data.quantidade is int && data.quantidade > 0
+					&& data.atualizadoEm == request.time;
+			}
+
+			allow get: if signedIn()
+				&& (itemId.matches('^' + request.auth.uid + '_.*$')
+					|| resource.data.usuarioUid == request.auth.uid);
+			allow list: if signedIn() && resource.data.usuarioUid == request.auth.uid;
+			allow create: if signedIn()
+				&& itemDoUsuario(request.auth.uid)
+				&& dadosDoItemValidos(request.resource.data, request.auth.uid);
+			allow update: if signedIn()
+				&& resource.data.usuarioUid == request.auth.uid
+				&& itemDoUsuario(request.auth.uid)
+				&& dadosDoItemValidos(request.resource.data, request.auth.uid);
+			allow delete: if signedIn() && resource.data.usuarioUid == request.auth.uid;
+		}
 	}
 }
